@@ -1,4 +1,4 @@
-# Query Binance
+# Binance Profit Monitor
 ## Configuration
 Copy gunbot `config.js` inside `binance` directory. Make sure you have api keys setup in config.js
 
