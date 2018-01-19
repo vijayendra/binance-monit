@@ -10,4 +10,4 @@ docker run -it vijay/binance
 
 ## License
 
-[MIT License](https://vijayendra.mit-license.org/) © Vijayendra Bapte
+
