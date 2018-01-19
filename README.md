@@ -7,3 +7,7 @@ Copy gunbot `config.js` inside `binance` directory. Make sure you have api keys 
 docker build -t vijay/binance .
 docker run -it vijay/binance 
 ```
+
+## License
+
+[MIT License](https://vijayendra.mit-license.org/) © Vijayendra Bapte
