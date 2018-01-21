@@ -12,8 +12,13 @@ from aiohttp import web
 
 CONFIG_PATH = '/opt/app/config.yaml'
 
+DELAY = 10  # sec
+
 if not os.path.isfile(CONFIG_PATH):
     raise SystemError('Config file not exists: {}'.format(CONFIG_PATH))
+
+
+last_response = {}
 
 
 def get_config():
@@ -36,7 +41,7 @@ class Binance(object):
 
     async def query(self):
         data = {
-            'time': time.time(),
+            'time': int(time.time()),
             'total_invtestment': self.config['total_invtestment']
         }
         info = self.client.get_account()
@@ -78,6 +83,7 @@ class Binance(object):
 
 
 async def query(app):
+    await asyncio.sleep(1)  # let web server start first
     binance_obj = Binance(app)
     try:
         for i in itertools.count():
@@ -87,8 +93,10 @@ async def query(app):
             except binance.exceptions.BinanceAPIException as e:
                 print('Error {}'.format(e))
             else:
+                global last_response
+                last_response = data
                 pprint(data)
-            await asyncio.sleep(5)
+            await asyncio.sleep(DELAY)
     except asyncio.CancelledError:
         pass
     finally:
@@ -105,17 +113,15 @@ async def cleanup_background_tasks(app):
 
 
 async def handle(request):
-    name = request.match_info.get('name', "Anonymous")
-    text = "Hello, " + name
-    return web.Response(text=text)
+    return web.json_response(last_response)
 
 
 if __name__ == "__main__":
+    os.system("ntpd -gq")  # run timesync
     config = get_config()
     app = web.Application()
     app['config'] = config
     app.router.add_get('/', handle)
-    app.router.add_get('/{name}', handle)
 
     app.on_startup.append(start_background_tasks)
     app.on_cleanup.append(cleanup_background_tasks)
