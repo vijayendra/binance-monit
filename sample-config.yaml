@@ -1,0 +1,9 @@
+# usd investments
+btc_deposit_amount: 1000
+total_invtestment: 1500
+
+# binance details
+binance:
+  key: your-key
+  secret: your-secret
+
