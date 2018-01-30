@@ -12,7 +12,7 @@ from aiohttp import web
 
 CONFIG_PATH = '/opt/app/config.yaml'
 
-DELAY = 10  # sec
+DELAY = 60  # sec
 
 if not os.path.isfile(CONFIG_PATH):
     raise SystemError('Config file not exists: {}'.format(CONFIG_PATH))
@@ -78,7 +78,7 @@ class Binance(object):
             'amount': btc_delta * prices['BTCUSDT'],
         }
         data['net_profit'] = (btc_balance * prices['BTCUSDT']) - \
-            self.config['btc_deposit_amount']
+            self.config['total_invtestment']
         return data
 
 
