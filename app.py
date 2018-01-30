@@ -1,4 +1,6 @@
 import asyncio
+import csv
+import datetime
 import itertools
 import os
 import time
@@ -12,7 +14,9 @@ from aiohttp import web
 
 CONFIG_PATH = '/opt/app/config.yaml'
 
-DELAY = 60  # sec
+CSVFILE = '/data/binance.csv'
+
+DELAY = 30  # sec
 
 if not os.path.isfile(CONFIG_PATH):
     raise SystemError('Config file not exists: {}'.format(CONFIG_PATH))
@@ -38,11 +42,40 @@ class Binance(object):
             self.config['binance']['key'],
             self.config['binance']['secret'],
         )
+        self.header = [
+            'time',
+            'datetime',
+            'total_invtestment',
+            'btc_usd_amount',
+            'btc_deposit_count',
+            'btc_deposit_amount',
+            'btc_now_count',
+            'btc_now_amount',
+            'btc_gain_count',
+            'btc_gain_amount',
+            'net_profit',
+        ]
+
+    def update_csv(self, data):
+        if self.header is None:
+            self.header = data.keys()
+        if not os.path.isfile(CSVFILE):
+            write_header = True
+        else:
+            write_header = False
+
+        with open(CSVFILE, 'a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            if write_header:
+                writer.writerow(self.header)
+            row = [str(data.get(k, '')) for k in self.header]
+            writer.writerow(row)
 
     async def query(self):
         data = {
             'time': int(time.time()),
-            'total_invtestment': self.config['total_invtestment']
+            'datetime': str(datetime.datetime.now()),
+            'total_invtestment': self.config['total_invtestment'],
         }
         info = self.client.get_account()
         balances = info['balances']
@@ -65,20 +98,15 @@ class Binance(object):
                 btc_balance += position * prices[symbol]
         btc_delta = btc_balance - btc_deposit_count
         data['btc_usd_amount'] = prices['BTCUSDT']
-        data['btc_deposit'] = {
-            'count': btc_deposit_count,
-            'amount': self.config['btc_deposit_amount'],
-        }
-        data['btc_now'] = {
-            'count': btc_balance,
-            'amount': btc_balance * prices['BTCUSDT'],
-        }
-        data['btc_delta'] = {
-            'count': btc_delta,
-            'amount': btc_delta * prices['BTCUSDT'],
-        }
-        data['net_profit'] = (btc_balance * prices['BTCUSDT']) - \
-            self.config['total_invtestment']
+        data['btc_deposit_count'] = btc_deposit_count
+        data['btc_deposit_amount'] = self.config['btc_deposit_amount']
+        data['btc_now_count'] = btc_balance
+        data['btc_now_amount'] = btc_balance * prices['BTCUSDT']
+        data['btc_gain_count'] = btc_delta
+        data['btc_gain_amount'] = btc_delta * prices['BTCUSDT']
+        data['net_profit'] = (btc_balance * prices['BTCUSDT']
+                              ) - self.config['total_invtestment']
+        self.update_csv(data)
         return data
 
 
@@ -122,6 +150,11 @@ if __name__ == "__main__":
     app = web.Application()
     app['config'] = config
     app.router.add_get('/', handle)
+    app.router.add_static(
+        '/static/',
+        path='/data',
+        name='static',
+    )
 
     app.on_startup.append(start_background_tasks)
     app.on_cleanup.append(cleanup_background_tasks)
